@@ -4,23 +4,27 @@ import { useAuth } from '../contexts/AuthContext';
 import { BookOpen } from 'lucide-react';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleGoogleLogin() {
     try {
       setError('');
       setLoading(true);
-      await login(email, password);
-      navigate('/');
+      const result = await loginWithGoogle();
+      
+      // 구글 로그인 성공 후, 호스트 이메일인지 확인
+      if (result.user.email !== 'happysinyeong21@gmail.com') {
+        setError('접근 권한이 없는 계정입니다. 호스트 계정으로 로그인해주세요.');
+        // 권한이 없으므로 로그아웃 처리할 수도 있지만, 일단 에러만 표시
+      } else {
+        navigate('/');
+      }
     } catch (err) {
-      setError('로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.');
+      setError('구글 로그인에 실패했습니다. 다시 시도해주세요.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -33,7 +37,7 @@ export default function Login() {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <BookOpen size={48} style={{ color: 'white', marginBottom: '1rem' }} />
           <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>호스트 로그인</h2>
-          <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>자료 관리를 위해 로그인하세요.</p>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>자료 관리를 위해 구글 계정으로 로그인하세요.</p>
         </div>
 
         {error && (
@@ -42,37 +46,15 @@ export default function Login() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>이메일</label>
-            <input 
-              type="email" 
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{ width: '100%' }}
-              placeholder="happysinyeong21@gmail.com"
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>비밀번호</label>
-            <input 
-              type="password" 
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </div>
-          <button 
-            type="submit" 
-            className="btn-primary" 
-            disabled={loading}
-            style={{ width: '100%', marginTop: '1rem', justifyContent: 'center', padding: '0.75rem' }}
-          >
-            {loading ? '로그인 중...' : '로그인'}
-          </button>
-        </form>
+        <button 
+          onClick={handleGoogleLogin} 
+          className="btn-primary" 
+          disabled={loading}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.75rem', gap: '0.5rem', background: 'white', color: '#333' }}
+        >
+          <img src="https://www.google.com/favicon.ico" alt="Google" style={{ width: '20px', height: '20px' }} />
+          {loading ? '로그인 중...' : 'Google 계정으로 로그인'}
+        </button>
       </div>
     </div>
   );
