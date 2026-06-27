@@ -6,26 +6,30 @@ import Dashboard from './pages/Dashboard';
 import BoardEditor from './pages/BoardEditor';
 import BoardViewer from './pages/BoardViewer';
 import CardViewer from './pages/CardViewer';
+import Login from './pages/Login';
+import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="app-container">
-        <Header />
-        <main>
-          <Routes>
-            {/* Admin Routes */}
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/board/edit/:boardId" element={<BoardEditor />} />
-            
-            {/* Student (Viewer) Routes */}
-            <Route path="/share/board/:boardId" element={<BoardViewer />} />
-            <Route path="/share/card/:cardId" element={<CardViewer />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <div className="app-container">
+          <Header />
+          <main>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              
+              {/* Admin & Student Routes (Unprotected, access handled inside components) */}
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/board/edit/:boardId" element={<BoardEditor />} />
+              <Route path="/share/board/:boardId" element={<BoardViewer />} />
+              <Route path="/share/card/:cardId" element={<CardViewer />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

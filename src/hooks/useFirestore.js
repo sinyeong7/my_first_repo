@@ -12,9 +12,12 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
 
 export function useBoards() {
   const [boards, setBoards] = useState([]);
+  const { currentUser } = useAuth();
+  const isHost = currentUser?.email === 'happysinyeong21@gmail.com';
 
   useEffect(() => {
     const q = query(collection(db, 'boards'), orderBy('created_at', 'desc'));
@@ -33,22 +36,23 @@ export function useBoards() {
     return unsubscribe;
   }, []);
 
-  const addBoard = async (title, layout_type) => {
+  const addBoard = async (title) => {
+    if (!isHost) throw new Error("Permission denied. Only host can create boards.");
+
     const docRef = await addDoc(collection(db, 'boards'), {
       title,
-      layout_type,
-      user_id: 'anonymous', // 로그인 없이 익명으로 저장
+      user_id: currentUser.uid,
       created_at: serverTimestamp()
     });
     
     return {
       board_id: docRef.id,
-      title,
-      layout_type
+      title
     };
   };
 
   const deleteBoard = async (id) => {
+    if (!isHost) throw new Error("Permission denied. Only host can delete boards.");
     try {
       await deleteDoc(doc(db, 'boards', id));
     } catch (e) {
@@ -56,11 +60,13 @@ export function useBoards() {
     }
   };
 
-  return { boards, addBoard, deleteBoard };
+  return { boards, addBoard, deleteBoard, isHost };
 }
 
 export function useCards(boardId = null) {
   const [cards, setCards] = useState([]);
+  const { currentUser } = useAuth();
+  const isHost = currentUser?.email === 'happysinyeong21@gmail.com';
 
   useEffect(() => {
     if (!boardId) return;
@@ -86,6 +92,8 @@ export function useCards(boardId = null) {
   }, [boardId]);
 
   const addCard = async (board_id, file_url, title, description) => {
+    if (!isHost) throw new Error("Permission denied. Only host can add cards.");
+
     const docRef = await addDoc(collection(db, 'cards'), {
       board_id,
       file_url,
@@ -111,6 +119,7 @@ export function useCards(boardId = null) {
   };
 
   const updateCard = async (card_id, updates) => {
+    if (!isHost) throw new Error("Permission denied. Only host can edit cards.");
     try {
       await updateDoc(doc(db, 'cards', card_id), updates);
     } catch (e) {
@@ -119,6 +128,7 @@ export function useCards(boardId = null) {
   };
 
   const deleteCard = async (card_id) => {
+    if (!isHost) throw new Error("Permission denied. Only host can delete cards.");
     try {
       await deleteDoc(doc(db, 'cards', card_id));
     } catch (e) {
@@ -135,6 +145,7 @@ export function useCards(boardId = null) {
     updateCard,
     deleteCard, 
     getCardsByBoard, 
-    getCardById 
+    getCardById,
+    isHost
   };
 }

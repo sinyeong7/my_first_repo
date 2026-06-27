@@ -6,23 +6,23 @@ import { useBoards, useCards } from '../hooks/useFirestore';
 export default function BoardEditor() {
   const { boardId } = useParams();
   const navigate = useNavigate();
-  const { boards } = useBoards();
+  const { boards, isHost } = useBoards();
   const board = boards.find(b => b.board_id === boardId);
   const { cards, addCard, deleteCard, updateCard } = useCards(boardId);
   
   const fileInputRef = useRef(null);
   const [showImageModal, setShowImageModal] = useState(null);
 
-  if (!board) return <div>보드를 찾을 수 없습니다.</div>;
+  if (!board) return <div style={{ textAlign: 'center', marginTop: '5rem' }}>보드를 찾을 수 없습니다.</div>;
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || !isHost) return;
 
     // FileReader를 사용해 로컬 테스트용 Base64 생성
     const reader = new FileReader();
     reader.onloadend = () => {
-      addCard(boardId, reader.result, '새 자료', '설명을 입력하세요 (개인정보 주의)');
+      addCard(boardId, reader.result, '새 자료', '설명을 입력하세요');
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -30,7 +30,7 @@ export default function BoardEditor() {
 
   const copyLink = (link) => {
     navigator.clipboard.writeText(link);
-    alert('공유 링크가 복사되었습니다!\n(로컬 링크이므로 현재 PC에서 시크릿 모드로 테스트 해보세요)');
+    alert('공유 링크가 복사되었습니다!');
   };
 
   return (
@@ -40,15 +40,17 @@ export default function BoardEditor() {
           <button className="btn-secondary" onClick={() => navigate('/')} style={{ marginBottom: '1rem', padding: '0.5rem 1rem' }}>
             ← 목록으로
           </button>
-          <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{board.title} (편집 모드)</h1>
+          <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{board.title} {isHost ? '(편집 모드)' : ''}</h1>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button className="btn-secondary" onClick={() => copyLink(`${window.location.origin}/share/board/${board.board_id}`)}>
             <Share2 size={20} /> 보드 전체 링크
           </button>
-          <button className="btn-primary" onClick={() => fileInputRef.current?.click()}>
-            <Upload size={20} /> 자료 업로드
-          </button>
+          {isHost && (
+            <button className="btn-primary" onClick={() => fileInputRef.current?.click()}>
+              <Upload size={20} /> 자료 업로드
+            </button>
+          )}
           <input 
             type="file" 
             ref={fileInputRef} 
@@ -80,25 +82,37 @@ export default function BoardEditor() {
               </button>
             </div>
             <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <input 
-                type="text" 
-                value={card.title} 
-                onChange={(e) => updateCard(card.card_id, { title: e.target.value })}
-                style={{ fontWeight: 'bold', fontSize: '1.1rem' }}
-              />
-              <textarea 
-                value={card.description} 
-                onChange={(e) => updateCard(card.card_id, { description: e.target.value })}
-                rows={3}
-                style={{ resize: 'vertical' }}
-              />
+              {isHost ? (
+                <input 
+                  type="text" 
+                  value={card.title} 
+                  onChange={(e) => updateCard(card.card_id, { title: e.target.value })}
+                  style={{ fontWeight: 'bold', fontSize: '1.1rem' }}
+                />
+              ) : (
+                <h3 style={{ fontWeight: 'bold', fontSize: '1.1rem', margin: 0 }}>{card.title}</h3>
+              )}
+              
+              {isHost ? (
+                <textarea 
+                  value={card.description} 
+                  onChange={(e) => updateCard(card.card_id, { description: e.target.value })}
+                  rows={3}
+                  style={{ resize: 'vertical' }}
+                />
+              ) : (
+                <p style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{card.description}</p>
+              )}
+              
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'auto' }}>
                 <button className="btn-secondary" onClick={() => copyLink(card.share_link)}>
                   <LinkIcon size={18} /> 개별 링크
                 </button>
-                <button className="btn-danger" onClick={() => deleteCard(card.card_id)}>
-                  <Trash2 size={18} />
-                </button>
+                {isHost && (
+                  <button className="btn-danger" onClick={() => deleteCard(card.card_id)}>
+                    <Trash2 size={18} />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -106,7 +120,7 @@ export default function BoardEditor() {
         {cards.length === 0 && (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', background: 'rgba(255,255,255,0.1)', borderRadius: '1rem' }}>
             <Upload size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
-            <p>우측 상단의 '자료 업로드' 버튼을 눌러 첫 자료를 추가해보세요.</p>
+            <p>{isHost ? "우측 상단의 '자료 업로드' 버튼을 눌러 첫 자료를 추가해보세요." : "아직 업로드된 자료가 없습니다."}</p>
           </div>
         )}
       </div>

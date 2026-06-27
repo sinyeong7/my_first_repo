@@ -25,9 +25,9 @@ export default function BoardViewer() {
         <p style={{ color: 'rgba(255,255,255,0.8)', marginTop: '0.5rem' }}>선생님이 공유해주신 자료입니다. 클릭해서 확인해보세요.</p>
       </div>
 
-      <div className={board.layout_type === 'GRID' ? 'grid-layout' : 'grid-layout'} style={board.layout_type === 'MINDMAP' ? { display: 'flex', flexWrap: 'wrap', justifyContent: 'center' } : {}}>
+      <div className="grid-layout">
         {cards.map(card => (
-          <div key={card.card_id} className="glass-card" style={board.layout_type === 'MINDMAP' ? { width: '300px', margin: '1rem' } : {}}>
+          <div key={card.card_id} className="glass-card">
             <div 
               style={{ 
                 height: '200px', 
