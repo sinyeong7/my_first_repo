@@ -1,14 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Maximize2 } from 'lucide-react';
-import { useCards } from '../hooks/useFirestore';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export default function CardViewer() {
   const { cardId } = useParams();
-  const { getCardById } = useCards();
-  const card = getCardById(cardId);
-  
+  const [card, setCard] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showImageModal, setShowImageModal] = useState(null);
+
+  useEffect(() => {
+    async function fetchCard() {
+      try {
+        const docRef = doc(db, 'cards', cardId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setCard({ card_id: docSnap.id, ...docSnap.data() });
+        } else {
+          setCard(null);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCard();
+  }, [cardId]);
+
+  if (loading) return <div style={{ textAlign: 'center', marginTop: '5rem' }}>로딩 중...</div>;
 
   if (!card) return (
     <div style={{ textAlign: 'center', marginTop: '5rem' }}>
