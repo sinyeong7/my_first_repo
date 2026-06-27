@@ -24,7 +24,7 @@ export default function Login() {
         navigate('/');
       }
     } catch (err) {
-      setError('구글 로그인에 실패했습니다. 다시 시도해주세요.');
+      setError(`구글 로그인에 실패했습니다: ${err.message || err}`);
       console.error(err);
     } finally {
       setLoading(false);
