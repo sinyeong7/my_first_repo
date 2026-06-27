@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Maximize2, BookOpen } from 'lucide-react';
-import { useBoards, useCards } from '../hooks/useLocalStorage';
+import { useBoards, useCards } from '../hooks/useFirestore';
 
 export default function BoardViewer() {
   const { boardId } = useParams();

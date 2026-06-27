@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, Link as LinkIcon, Trash2, Maximize2, Share2 } from 'lucide-react';
-import { useBoards, useCards } from '../hooks/useLocalStorage';
+import { useBoards, useCards } from '../hooks/useFirestore';
 
 export default function BoardEditor() {
   const { boardId } = useParams();

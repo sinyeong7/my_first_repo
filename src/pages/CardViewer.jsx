@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Maximize2 } from 'lucide-react';
-import { useCards } from '../hooks/useLocalStorage';
+import { useCards } from '../hooks/useFirestore';
 
 export default function CardViewer() {
   const { cardId } = useParams();

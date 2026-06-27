@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, LayoutGrid, Network } from 'lucide-react';
-import { useBoards } from '../hooks/useLocalStorage';
+import { useBoards } from '../hooks/useFirestore';
 
 export default function Dashboard() {
   const { boards, addBoard, deleteBoard } = useBoards();
