@@ -91,12 +91,13 @@ export function useCards(boardId = null) {
     return unsubscribe;
   }, [boardId]);
 
-  const addCard = async (board_id, file_url, title, description, file_type = 'image', file_name = '') => {
+  const addCard = async (board_id, file_url, cover_url, title, description, file_type = 'image', file_name = '') => {
     if (!isHost) throw new Error("Permission denied. Only host can add cards.");
 
     const docRef = await addDoc(collection(db, 'cards'), {
       board_id,
       file_url,
+      cover_url,
       title,
       description,
       file_type,
@@ -114,6 +115,7 @@ export function useCards(boardId = null) {
       card_id: docRef.id,
       board_id,
       file_url,
+      cover_url,
       title,
       description,
       file_type,

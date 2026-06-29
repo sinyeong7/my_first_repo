@@ -31,26 +31,26 @@ export default function BoardViewer() {
             <div 
               style={{ 
                 height: '200px', 
-                backgroundColor: card.file_type === 'pdf' ? '#f1f5f9' : 'transparent',
-                backgroundImage: card.file_type === 'pdf' ? 'none' : `url(${card.file_url})`, 
+                backgroundColor: (!card.cover_url && card.file_type !== 'image') ? '#f1f5f9' : 'transparent',
+                backgroundImage: card.cover_url ? `url(${card.cover_url})` : (card.file_type === 'image' ? `url(${card.file_url})` : 'none'), 
                 backgroundSize: 'cover', 
                 backgroundPosition: 'center',
                 position: 'relative',
                 cursor: 'pointer',
-                display: card.file_type === 'pdf' ? 'flex' : 'block',
-                alignItems: card.file_type === 'pdf' ? 'center' : 'initial',
-                justifyContent: card.file_type === 'pdf' ? 'center' : 'initial',
-                flexDirection: card.file_type === 'pdf' ? 'column' : 'initial'
+                display: (!card.cover_url && card.file_type !== 'image') ? 'flex' : 'block',
+                alignItems: (!card.cover_url && card.file_type !== 'image') ? 'center' : 'initial',
+                justifyContent: (!card.cover_url && card.file_type !== 'image') ? 'center' : 'initial',
+                flexDirection: (!card.cover_url && card.file_type !== 'image') ? 'column' : 'initial'
               }}
               onClick={() => {
-                if (card.file_type === 'pdf') {
-                  window.open(card.file_url, '_blank');
-                } else {
+                if (card.file_type === 'image') {
                   setShowImageModal(card.file_url);
+                } else {
+                  window.open(card.file_url, '_blank');
                 }
               }}
             >
-              {card.file_type === 'pdf' ? (
+              {(!card.cover_url && card.file_type !== 'image') ? (
                 <div style={{ textAlign: 'center', color: '#64748b' }}>
                   <FileText size={48} style={{ marginBottom: '0.5rem', margin: '0 auto' }} />
                   <div style={{ fontSize: '0.9rem', fontWeight: 600, padding: '0 1rem', wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>

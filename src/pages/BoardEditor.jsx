@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, Link as LinkIcon, Trash2, Maximize2, Share2, Loader2, FileText } from 'lucide-react';
+import { Upload, Link as LinkIcon, Trash2, Maximize2, Share2, Loader2, FileText, Image as ImageIcon } from 'lucide-react';
 import { useBoards, useCards } from '../hooks/useFirestore';
 import { storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -12,30 +12,55 @@ export default function BoardEditor() {
   const board = boards.find(b => b.board_id === boardId);
   const { cards, addCard, deleteCard, updateCard } = useCards(boardId);
   
-  const fileInputRef = useRef(null);
   const [showImageModal, setShowImageModal] = useState(null);
+  
+  // Upload Modal State
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadDesc, setUploadDesc] = useState('');
+  const [coverFile, setCoverFile] = useState(null);
+  const [attachFile, setAttachFile] = useState(null);
 
   if (!board) return <div style={{ textAlign: 'center', marginTop: '5rem' }}>보드를 찾을 수 없습니다.</div>;
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !isHost) return;
-
+  const handleSubmitUpload = async (e) => {
+    e.preventDefault();
+    if (!attachFile || !isHost) return alert('첨부파일을 반드시 선택해주세요!');
+    
     setIsUploading(true);
     try {
-      const storageRef = ref(storage, `boards/${boardId}/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      // 1. Upload Attachment
+      const attachRef = ref(storage, `boards/${boardId}/${Date.now()}_attach_${attachFile.name}`);
+      const attachSnapshot = await uploadBytes(attachRef, attachFile);
+      const fileUrl = await getDownloadURL(attachSnapshot.ref);
       
-      const fileType = file.type.includes('pdf') || file.name.endsWith('.pdf') ? 'pdf' : 'image';
-      await addCard(boardId, downloadURL, file.name || '새 자료', '설명을 입력하세요', fileType, file.name);
+      // 2. Upload Cover Image (if selected)
+      let coverUrl = '';
+      if (coverFile) {
+        const coverRef = ref(storage, `boards/${boardId}/${Date.now()}_cover_${coverFile.name}`);
+        const coverSnapshot = await uploadBytes(coverRef, coverFile);
+        coverUrl = await getDownloadURL(coverSnapshot.ref);
+      }
+      
+      // Determine file type
+      let fileType = 'file';
+      if (attachFile.type.startsWith('image/')) fileType = 'image';
+      else if (attachFile.type.includes('pdf') || attachFile.name.endsWith('.pdf')) fileType = 'pdf';
+      
+      await addCard(boardId, fileUrl, coverUrl, uploadTitle || '새 자료', uploadDesc || '설명을 입력하세요', fileType, attachFile.name);
+      
+      // Reset Modal State
+      setShowUploadModal(false);
+      setUploadTitle('');
+      setUploadDesc('');
+      setCoverFile(null);
+      setAttachFile(null);
     } catch (error) {
       console.error("Upload failed", error);
-      alert("업로드에 실패했습니다. 권한 문제이거나 파일이 잘못되었습니다.");
+      alert("업로드에 실패했습니다. 파일이 너무 크거나 문제가 발생했습니다.");
     } finally {
       setIsUploading(false);
-      e.target.value = '';
     }
   };
 
@@ -58,18 +83,10 @@ export default function BoardEditor() {
             <Share2 size={20} /> 보드 전체 링크
           </button>
           {isHost && (
-            <button className="btn-primary" onClick={() => fileInputRef.current?.click()} disabled={isUploading} style={{ opacity: isUploading ? 0.7 : 1, cursor: isUploading ? 'not-allowed' : 'pointer' }}>
-              {isUploading ? <Loader2 size={20} className="spin" /> : <Upload size={20} />}
-              {isUploading ? ' 업로드 중...' : ' 자료 업로드'}
+            <button className="btn-primary" onClick={() => setShowUploadModal(true)}>
+              <Upload size={20} /> 자료 업로드
             </button>
           )}
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleImageUpload} 
-            accept="image/*,.pdf" 
-            style={{ display: 'none' }} 
-          />
         </div>
       </div>
 
@@ -79,18 +96,18 @@ export default function BoardEditor() {
             <div 
               style={{ 
                 height: '200px', 
-                backgroundColor: card.file_type === 'pdf' ? '#f1f5f9' : 'transparent',
-                backgroundImage: card.file_type === 'pdf' ? 'none' : `url(${card.file_url})`, 
+                backgroundColor: (!card.cover_url && card.file_type !== 'image') ? '#f1f5f9' : 'transparent',
+                backgroundImage: card.cover_url ? `url(${card.cover_url})` : (card.file_type === 'image' ? `url(${card.file_url})` : 'none'), 
                 backgroundSize: 'cover', 
                 backgroundPosition: 'center',
                 position: 'relative',
-                display: 'flex',
+                display: (!card.cover_url && card.file_type !== 'image') ? 'flex' : 'block',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexDirection: 'column'
               }}
             >
-              {card.file_type === 'pdf' && (
+              {(!card.cover_url && card.file_type !== 'image') && (
                 <div style={{ textAlign: 'center', color: '#64748b' }}>
                   <FileText size={48} style={{ marginBottom: '0.5rem' }} />
                   <div style={{ fontSize: '0.9rem', fontWeight: 600, padding: '0 1rem', wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -102,13 +119,13 @@ export default function BoardEditor() {
                 className="btn-icon" 
                 style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(255,255,255,0.8)' }}
                 onClick={() => {
-                  if (card.file_type === 'pdf') {
-                    window.open(card.file_url, '_blank');
-                  } else {
+                  if (card.file_type === 'image') {
                     setShowImageModal(card.file_url);
+                  } else {
+                    window.open(card.file_url, '_blank');
                   }
                 }}
-                title={card.file_type === 'pdf' ? '새 창에서 열기' : '크게 보기'}
+                title={card.file_type === 'image' ? '크게 보기' : '원본 파일 열기'}
               >
                 <Maximize2 size={18} />
               </button>
@@ -162,6 +179,73 @@ export default function BoardEditor() {
           <div className="modal-content" style={{ maxWidth: '90vw', padding: '1rem', background: 'transparent', boxShadow: 'none' }} onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowImageModal(null)} style={{ color: 'white', background: 'rgba(0,0,0,0.5)' }}>✕</button>
             <img src={showImageModal} alt="Enlarged" style={{ width: '100%', height: 'auto', maxHeight: '85vh', objectFit: 'contain', borderRadius: '8px' }} />
+          </div>
+        </div>
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="modal-overlay" onClick={() => !isUploading && setShowUploadModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: '500px' }}>
+            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: 'bold' }}>새 자료 업로드</h2>
+            <form onSubmit={handleSubmitUpload} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>자료 제목</label>
+                <input 
+                  type="text" 
+                  placeholder="예) 1단원 핵심 요약본" 
+                  value={uploadTitle} 
+                  onChange={e => setUploadTitle(e.target.value)} 
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>설명 (선택)</label>
+                <textarea 
+                  placeholder="자료에 대한 설명을 입력하세요" 
+                  value={uploadDesc} 
+                  onChange={e => setUploadDesc(e.target.value)} 
+                  rows={2}
+                />
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                  <FileText size={18} /> 원본 첨부파일 (필수)
+                </label>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>PDF, PPT, 엑셀 등 열람/다운로드될 원본 파일</p>
+                <input 
+                  type="file" 
+                  required
+                  onChange={e => setAttachFile(e.target.files[0])} 
+                  style={{ border: 'none', padding: 0 }}
+                />
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                  <ImageIcon size={18} /> 썸네일 표지 이미지 (선택)
+                </label>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>게시판 화면에 예쁘게 보여질 표지 (없으면 기본 아이콘 표시)</p>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={e => setCoverFile(e.target.files[0])} 
+                  style={{ border: 'none', padding: 0 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowUploadModal(false)} disabled={isUploading}>
+                  취소
+                </button>
+                <button type="submit" className="btn-primary" disabled={isUploading}>
+                  {isUploading ? <><Loader2 size={18} className="spin" /> 업로드 중...</> : '저장하기'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
