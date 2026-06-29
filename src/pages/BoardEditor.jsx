@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, Link as LinkIcon, Trash2, Maximize2, Share2 } from 'lucide-react';
+import { Upload, Link as LinkIcon, Trash2, Maximize2, Share2, Loader2, FileText } from 'lucide-react';
 import { useBoards, useCards } from '../hooks/useFirestore';
+import { storage } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function BoardEditor() {
   const { boardId } = useParams();
@@ -12,20 +14,29 @@ export default function BoardEditor() {
   
   const fileInputRef = useRef(null);
   const [showImageModal, setShowImageModal] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   if (!board) return <div style={{ textAlign: 'center', marginTop: '5rem' }}>보드를 찾을 수 없습니다.</div>;
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !isHost) return;
 
-    // FileReader를 사용해 로컬 테스트용 Base64 생성
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      addCard(boardId, reader.result, '새 자료', '설명을 입력하세요');
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    setIsUploading(true);
+    try {
+      const storageRef = ref(storage, `boards/${boardId}/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      const fileType = file.type.includes('pdf') || file.name.endsWith('.pdf') ? 'pdf' : 'image';
+      await addCard(boardId, downloadURL, file.name || '새 자료', '설명을 입력하세요', fileType, file.name);
+    } catch (error) {
+      console.error("Upload failed", error);
+      alert("업로드에 실패했습니다. 권한 문제이거나 파일이 잘못되었습니다.");
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
   };
 
   const copyLink = (link) => {
@@ -47,15 +58,16 @@ export default function BoardEditor() {
             <Share2 size={20} /> 보드 전체 링크
           </button>
           {isHost && (
-            <button className="btn-primary" onClick={() => fileInputRef.current?.click()}>
-              <Upload size={20} /> 자료 업로드
+            <button className="btn-primary" onClick={() => fileInputRef.current?.click()} disabled={isUploading} style={{ opacity: isUploading ? 0.7 : 1, cursor: isUploading ? 'not-allowed' : 'pointer' }}>
+              {isUploading ? <Loader2 size={20} className="spin" /> : <Upload size={20} />}
+              {isUploading ? ' 업로드 중...' : ' 자료 업로드'}
             </button>
           )}
           <input 
             type="file" 
             ref={fileInputRef} 
             onChange={handleImageUpload} 
-            accept="image/*" 
+            accept="image/*,.pdf" 
             style={{ display: 'none' }} 
           />
         </div>
@@ -67,16 +79,36 @@ export default function BoardEditor() {
             <div 
               style={{ 
                 height: '200px', 
-                backgroundImage: `url(${card.file_url})`, 
+                backgroundColor: card.file_type === 'pdf' ? '#f1f5f9' : 'transparent',
+                backgroundImage: card.file_type === 'pdf' ? 'none' : `url(${card.file_url})`, 
                 backgroundSize: 'cover', 
                 backgroundPosition: 'center',
-                position: 'relative'
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column'
               }}
             >
+              {card.file_type === 'pdf' && (
+                <div style={{ textAlign: 'center', color: '#64748b' }}>
+                  <FileText size={48} style={{ marginBottom: '0.5rem' }} />
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600, padding: '0 1rem', wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {card.file_name}
+                  </div>
+                </div>
+              )}
               <button 
                 className="btn-icon" 
                 style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(255,255,255,0.8)' }}
-                onClick={() => setShowImageModal(card.file_url)}
+                onClick={() => {
+                  if (card.file_type === 'pdf') {
+                    window.open(card.file_url, '_blank');
+                  } else {
+                    setShowImageModal(card.file_url);
+                  }
+                }}
+                title={card.file_type === 'pdf' ? '새 창에서 열기' : '크게 보기'}
               >
                 <Maximize2 size={18} />
               </button>

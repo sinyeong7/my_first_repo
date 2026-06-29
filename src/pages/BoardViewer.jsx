@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Maximize2, BookOpen } from 'lucide-react';
+import { Maximize2, BookOpen, FileText } from 'lucide-react';
 import { useBoards, useCards } from '../hooks/useFirestore';
 
 export default function BoardViewer() {
@@ -31,19 +31,41 @@ export default function BoardViewer() {
             <div 
               style={{ 
                 height: '200px', 
-                backgroundImage: `url(${card.file_url})`, 
+                backgroundColor: card.file_type === 'pdf' ? '#f1f5f9' : 'transparent',
+                backgroundImage: card.file_type === 'pdf' ? 'none' : `url(${card.file_url})`, 
                 backgroundSize: 'cover', 
                 backgroundPosition: 'center',
                 position: 'relative',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: card.file_type === 'pdf' ? 'flex' : 'block',
+                alignItems: card.file_type === 'pdf' ? 'center' : 'initial',
+                justifyContent: card.file_type === 'pdf' ? 'center' : 'initial',
+                flexDirection: card.file_type === 'pdf' ? 'column' : 'initial'
               }}
-              onClick={() => setShowImageModal(card.file_url)}
+              onClick={() => {
+                if (card.file_type === 'pdf') {
+                  window.open(card.file_url, '_blank');
+                } else {
+                  setShowImageModal(card.file_url);
+                }
+              }}
             >
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', transition: 'background 0.2s' }} 
-                   onMouseOver={e => e.currentTarget.style.background = 'rgba(0,0,0,0.4)'}
-                   onMouseOut={e => e.currentTarget.style.background = 'rgba(0,0,0,0.2)'}
-              />
-              <Maximize2 size={24} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', opacity: 0.8 }} />
+              {card.file_type === 'pdf' ? (
+                <div style={{ textAlign: 'center', color: '#64748b' }}>
+                  <FileText size={48} style={{ marginBottom: '0.5rem', margin: '0 auto' }} />
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600, padding: '0 1rem', wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {card.file_name}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', transition: 'background 0.2s' }} 
+                       onMouseOver={e => e.currentTarget.style.background = 'rgba(0,0,0,0.4)'}
+                       onMouseOut={e => e.currentTarget.style.background = 'rgba(0,0,0,0.2)'}
+                  />
+                  <Maximize2 size={24} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', opacity: 0.8 }} />
+                </>
+              )}
             </div>
             <div style={{ padding: '1.5rem' }}>
               <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{card.title}</h3>
