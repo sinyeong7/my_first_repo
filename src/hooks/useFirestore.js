@@ -21,7 +21,8 @@ export function useDashboardSettings() {
   const isHost = currentUser?.email === 'happysinyeong21@gmail.com';
 
   useEffect(() => {
-    const docRef = doc(db, 'settings', 'dashboard');
+    // Use 'boards' collection to bypass strict Firestore rules that might block a new 'settings' collection.
+    const docRef = doc(db, 'boards', 'dashboard_settings');
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists() && docSnap.data().title) {
         setDashboardTitle(docSnap.data().title);
@@ -36,7 +37,7 @@ export function useDashboardSettings() {
   const updateDashboardTitle = async (newTitle) => {
     if (!isHost) return;
     try {
-      await setDoc(doc(db, 'settings', 'dashboard'), { title: newTitle }, { merge: true });
+      await setDoc(doc(db, 'boards', 'dashboard_settings'), { title: newTitle }, { merge: true });
     } catch (e) {
       console.error("Error updating dashboard title:", e);
     }
@@ -54,11 +55,13 @@ export function useBoards() {
     const q = query(collection(db, 'boards'), orderBy('created_at', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const boardData = snapshot.docs.map(doc => ({
-        board_id: doc.id,
-        ...doc.data(),
-        created_at: doc.data().created_at?.toDate().toISOString() || new Date().toISOString()
-      }));
+      const boardData = snapshot.docs
+        .filter(doc => doc.id !== 'dashboard_settings')
+        .map(doc => ({
+          board_id: doc.id,
+          ...doc.data(),
+          created_at: doc.data().created_at?.toDate().toISOString() || new Date().toISOString()
+        }));
       boardData.sort((a, b) => {
         const orderA = a.custom_order ?? new Date(a.created_at).getTime();
         const orderB = b.custom_order ?? new Date(b.created_at).getTime();
