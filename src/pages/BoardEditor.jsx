@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, Link as LinkIcon, Trash2, Maximize2, Share2, Loader2, FileText, Image as ImageIcon } from 'lucide-react';
+import { Upload, Link as LinkIcon, Trash2, Maximize2, Share2, Loader2, FileText, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBoards, useCards } from '../hooks/useFirestore';
 import { storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -10,7 +10,7 @@ export default function BoardEditor() {
   const navigate = useNavigate();
   const { boards, isHost } = useBoards();
   const board = boards.find(b => b.board_id === boardId);
-  const { cards, addCard, deleteCard, updateCard } = useCards(boardId);
+  const { cards, addCard, deleteCard, updateCard, moveCard } = useCards(boardId);
   
   const [showImageModal, setShowImageModal] = useState(null);
   
@@ -91,8 +91,8 @@ export default function BoardEditor() {
       </div>
 
       <div className="grid-layout">
-        {cards.map(card => (
-          <div key={card.card_id} className="glass-card">
+        {cards.map((card, index) => (
+          <div key={card.card_id} className="glass-card" style={{ display: 'flex', flexDirection: 'column' }}>
             <div 
               style={{ 
                 height: '200px', 
@@ -130,7 +130,7 @@ export default function BoardEditor() {
                 <Maximize2 size={18} />
               </button>
             </div>
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
               {isHost ? (
                 <input 
                   type="text" 
@@ -158,9 +158,17 @@ export default function BoardEditor() {
                   <LinkIcon size={18} /> 개별 링크
                 </button>
                 {isHost && (
-                  <button className="btn-danger" onClick={() => deleteCard(card.card_id)}>
-                    <Trash2 size={18} />
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="btn-secondary" disabled={index === 0} onClick={() => moveCard(index, 'left')} title="앞으로 이동" style={{ padding: '0.25rem 0.5rem' }}>
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button className="btn-secondary" disabled={index === cards.length - 1} onClick={() => moveCard(index, 'right')} title="뒤로 이동" style={{ padding: '0.25rem 0.5rem' }}>
+                      <ChevronRight size={18} />
+                    </button>
+                    <button className="btn-danger" onClick={() => deleteCard(card.card_id)} title="삭제">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

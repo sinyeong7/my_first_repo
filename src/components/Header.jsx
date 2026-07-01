@@ -22,7 +22,7 @@ export default function Header() {
         EduShare
       </Link>
       <nav style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-        <Link to="/" style={{ color: 'white', textDecoration: 'none', fontWeight: 500 }}>대시보드</Link>
+        <Link to="/" style={{ color: 'white', textDecoration: 'none', fontWeight: 500 }}>목록보기</Link>
         {currentUser ? (
           <button onClick={handleLogout} className="btn-icon" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'white', background: 'transparent', border: 'none', cursor: 'pointer' }} title="로그아웃">
             <LogOut size={20} />

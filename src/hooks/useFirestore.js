@@ -28,6 +28,11 @@ export function useBoards() {
         ...doc.data(),
         created_at: doc.data().created_at?.toDate().toISOString() || new Date().toISOString()
       }));
+      boardData.sort((a, b) => {
+        const orderA = a.custom_order ?? new Date(a.created_at).getTime();
+        const orderB = b.custom_order ?? new Date(b.created_at).getTime();
+        return orderB - orderA;
+      });
       setBoards(boardData);
     }, (error) => {
       console.error("Error fetching boards:", error);
@@ -60,7 +65,32 @@ export function useBoards() {
     }
   };
 
-  return { boards, addBoard, deleteBoard, isHost };
+  const moveBoard = async (index, direction) => {
+    if (!isHost) return;
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= boards.length) return;
+
+    const boardA = boards[index];
+    const boardB = boards[targetIndex];
+
+    const orderA = boardA.custom_order ?? new Date(boardA.created_at).getTime();
+    const orderB = boardB.custom_order ?? new Date(boardB.created_at).getTime();
+
+    let newOrderA = orderB;
+    let newOrderB = orderA;
+    if (newOrderA === newOrderB) {
+      newOrderA += 1;
+    }
+
+    try {
+      await updateDoc(doc(db, 'boards', boardA.board_id), { custom_order: newOrderA });
+      await updateDoc(doc(db, 'boards', boardB.board_id), { custom_order: newOrderB });
+    } catch (e) {
+      console.error("Error moving board:", e);
+    }
+  };
+
+  return { boards, addBoard, deleteBoard, moveBoard, isHost };
 }
 
 export function useCards(boardId = null) {
@@ -83,6 +113,11 @@ export function useCards(boardId = null) {
         ...doc.data(),
         created_at: doc.data().created_at?.toDate().toISOString() || new Date().toISOString()
       }));
+      cardData.sort((a, b) => {
+        const orderA = a.custom_order ?? new Date(a.created_at).getTime();
+        const orderB = b.custom_order ?? new Date(b.created_at).getTime();
+        return orderA - orderB;
+      });
       setCards(cardData);
     }, (error) => {
       console.error("Error fetching cards:", error);
@@ -142,6 +177,31 @@ export function useCards(boardId = null) {
     }
   };
 
+  const moveCard = async (index, direction) => {
+    if (!isHost) return;
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= cards.length) return;
+
+    const cardA = cards[index];
+    const cardB = cards[targetIndex];
+
+    const orderA = cardA.custom_order ?? new Date(cardA.created_at).getTime();
+    const orderB = cardB.custom_order ?? new Date(cardB.created_at).getTime();
+
+    let newOrderA = orderB;
+    let newOrderB = orderA;
+    if (newOrderA === newOrderB) {
+      newOrderA += 1;
+    }
+
+    try {
+      await updateDoc(doc(db, 'cards', cardA.card_id), { custom_order: newOrderA });
+      await updateDoc(doc(db, 'cards', cardB.card_id), { custom_order: newOrderB });
+    } catch (e) {
+      console.error("Error moving card:", e);
+    }
+  };
+
   const getCardsByBoard = (id) => cards.filter(c => c.board_id === id);
   const getCardById = (id) => cards.find(c => c.card_id === id);
 
@@ -150,6 +210,7 @@ export function useCards(boardId = null) {
     addCard, 
     updateCard,
     deleteCard, 
+    moveCard,
     getCardsByBoard, 
     getCardById,
     isHost
