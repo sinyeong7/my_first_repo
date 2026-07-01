@@ -9,10 +9,41 @@ import {
   updateDoc, 
   deleteDoc, 
   doc, 
+  setDoc,
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
+
+export function useDashboardSettings() {
+  const [dashboardTitle, setDashboardTitle] = useState('대시보드');
+  const { currentUser } = useAuth();
+  const isHost = currentUser?.email === 'happysinyeong21@gmail.com';
+
+  useEffect(() => {
+    const docRef = doc(db, 'settings', 'dashboard');
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists() && docSnap.data().title) {
+        setDashboardTitle(docSnap.data().title);
+      }
+    }, (err) => {
+      console.error("Error fetching dashboard settings:", err);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const updateDashboardTitle = async (newTitle) => {
+    if (!isHost) return;
+    try {
+      await setDoc(doc(db, 'settings', 'dashboard'), { title: newTitle }, { merge: true });
+    } catch (e) {
+      console.error("Error updating dashboard title:", e);
+    }
+  };
+
+  return { dashboardTitle, updateDashboardTitle };
+}
 
 export function useBoards() {
   const [boards, setBoards] = useState([]);
@@ -90,7 +121,16 @@ export function useBoards() {
     }
   };
 
-  return { boards, addBoard, deleteBoard, moveBoard, isHost };
+  const updateBoard = async (id, updates) => {
+    if (!isHost) throw new Error("Permission denied. Only host can edit boards.");
+    try {
+      await updateDoc(doc(db, 'boards', id), updates);
+    } catch (e) {
+      console.error("Error updating board:", e);
+    }
+  };
+
+  return { boards, addBoard, deleteBoard, moveBoard, updateBoard, isHost };
 }
 
 export function useCards(boardId = null) {

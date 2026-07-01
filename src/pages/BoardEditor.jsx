@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, Link as LinkIcon, Trash2, Maximize2, Share2, Loader2, FileText, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBoards, useCards } from '../hooks/useFirestore';
@@ -8,9 +8,14 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 export default function BoardEditor() {
   const { boardId } = useParams();
   const navigate = useNavigate();
-  const { boards, isHost } = useBoards();
+  const { boards, isHost, updateBoard } = useBoards();
   const board = boards.find(b => b.board_id === boardId);
   const { cards, addCard, deleteCard, updateCard, moveCard } = useCards(boardId);
+  
+  const [localBoardTitle, setLocalBoardTitle] = useState('');
+  useEffect(() => {
+    if (board?.title) setLocalBoardTitle(board.title);
+  }, [board?.title]);
   
   const [showImageModal, setShowImageModal] = useState(null);
   
@@ -76,7 +81,32 @@ export default function BoardEditor() {
           <button className="btn-secondary" onClick={() => navigate('/')} style={{ marginBottom: '1rem', padding: '0.5rem 1rem' }}>
             ← 목록으로
           </button>
-          <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{board.title} {isHost ? '(편집 모드)' : ''}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input 
+              type="text" 
+              value={localBoardTitle} 
+              onChange={(e) => setLocalBoardTitle(e.target.value)}
+              onBlur={() => {
+                if (localBoardTitle.trim() !== board.title) {
+                  updateBoard(boardId, { title: localBoardTitle.trim() || '제목 없는 보드' });
+                }
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+              style={{ 
+                fontSize: '2rem', 
+                fontWeight: 700, 
+                background: 'transparent', 
+                border: 'none', 
+                color: 'inherit', 
+                outline: 'none',
+                borderBottom: isHost ? '2px dashed rgba(255,255,255,0.3)' : 'none',
+                width: '100%'
+              }} 
+              title={isHost ? "클릭해서 이름을 변경할 수 있습니다" : ""}
+              readOnly={!isHost}
+            />
+            {isHost && <span style={{ fontSize: '1rem', opacity: 0.7 }}>(편집 모드)</span>}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button className="btn-secondary" onClick={() => copyLink(`${window.location.origin}/share/board/${board.board_id}`)}>
@@ -134,8 +164,13 @@ export default function BoardEditor() {
               {isHost ? (
                 <input 
                   type="text" 
-                  value={card.title} 
-                  onChange={(e) => updateCard(card.card_id, { title: e.target.value })}
+                  defaultValue={card.title} 
+                  onBlur={(e) => {
+                    if (e.target.value.trim() !== card.title) {
+                      updateCard(card.card_id, { title: e.target.value });
+                    }
+                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
                   style={{ fontWeight: 'bold', fontSize: '1.1rem' }}
                 />
               ) : (
@@ -144,8 +179,12 @@ export default function BoardEditor() {
               
               {isHost ? (
                 <textarea 
-                  value={card.description} 
-                  onChange={(e) => updateCard(card.card_id, { description: e.target.value })}
+                  defaultValue={card.description} 
+                  onBlur={(e) => {
+                    if (e.target.value.trim() !== card.description) {
+                      updateCard(card.card_id, { description: e.target.value });
+                    }
+                  }}
                   rows={3}
                   style={{ resize: 'vertical' }}
                 />

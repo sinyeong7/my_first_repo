@@ -1,13 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useBoards } from '../hooks/useFirestore';
+import { useBoards, useDashboardSettings } from '../hooks/useFirestore';
 
 export default function Dashboard() {
   const { boards, addBoard, deleteBoard, moveBoard, isHost } = useBoards();
+  const { dashboardTitle, updateDashboardTitle } = useDashboardSettings();
   const [newTitle, setNewTitle] = useState('');
-  const [dashboardTitle, setDashboardTitle] = useState(() => localStorage.getItem('dashboardTitle') || '대시보드');
+  const [localTitle, setLocalTitle] = useState('대시보드');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (dashboardTitle) {
+      setLocalTitle(dashboardTitle);
+    }
+  }, [dashboardTitle]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -22,11 +29,14 @@ export default function Dashboard() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <input 
           type="text" 
-          value={dashboardTitle} 
-          onChange={(e) => {
-            setDashboardTitle(e.target.value);
-            localStorage.setItem('dashboardTitle', e.target.value);
+          value={localTitle} 
+          onChange={(e) => setLocalTitle(e.target.value)}
+          onBlur={() => {
+            if (localTitle.trim() !== dashboardTitle) {
+              updateDashboardTitle(localTitle.trim() || '대시보드');
+            }
           }}
+          onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
           style={{ 
             fontSize: '2rem', 
             fontWeight: 700, 
@@ -35,7 +45,7 @@ export default function Dashboard() {
             color: 'inherit', 
             outline: 'none',
             borderBottom: isHost ? '2px dashed rgba(255,255,255,0.3)' : 'none',
-            width: 'auto'
+            width: '100%'
           }} 
           placeholder="대시보드 이름을 입력하세요"
           title={isHost ? "클릭해서 이름을 변경할 수 있습니다" : ""}
@@ -65,7 +75,32 @@ export default function Dashboard() {
       <div className="grid-layout">
         {boards.map((board, index) => (
           <div key={board.board_id} className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{board.title}</h3>
+            {isHost ? (
+              <input 
+                type="text" 
+                defaultValue={board.title} 
+                onBlur={(e) => {
+                  if (e.target.value.trim() !== board.title) {
+                    updateBoard(board.board_id, { title: e.target.value.trim() || '제목 없는 보드' });
+                  }
+                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                style={{ 
+                  fontSize: '1.25rem', 
+                  fontWeight: 'bold', 
+                  marginBottom: '0.5rem',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px dashed rgba(255,255,255,0.3)',
+                  color: 'inherit',
+                  outline: 'none',
+                  width: '100%'
+                }}
+                title="클릭해서 보드 제목을 변경할 수 있습니다"
+              />
+            ) : (
+              <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{board.title}</h3>
+            )}
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem', flex: 1 }}>
               생성일: {new Date(board.created_at).toLocaleDateString()}
             </p>
